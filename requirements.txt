@@ -4,8 +4,6 @@ sentence-transformers
 transformers
 torch
 gitpython
-tree-sitter
+tree_sitter
 requests
-sqlite3
-pathlib2
-hashlib2
+sqlite-utils
