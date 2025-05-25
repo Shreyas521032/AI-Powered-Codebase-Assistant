@@ -1,5 +1,5 @@
 import streamlit as st
-import pinecone
+from pinecone import Pinecone, ServerlessSpec
 import os
 import git
 import sqlite3
@@ -96,6 +96,7 @@ if 'initialized' not in st.session_state:
 class CodebaseAssistant:
     def __init__(self):
         self.embedding_model = None
+        self.pinecone_client = None
         self.pinecone_index = None
         self.db_path = "data/metadata.db"
         self.repos_path = "data/repos"
@@ -139,19 +140,29 @@ class CodebaseAssistant:
     def initialize_pinecone(self, api_key: str, environment: str = "gcp-starter"):
         """Initialize Pinecone connection"""
         try:
-            pinecone.init(api_key=api_key, environment=environment)
+            # Initialize Pinecone client
+            self.pinecone_client = Pinecone(api_key=api_key)
             
             # Create index if it doesn't exist
             index_name = "codebase-assistant"
-            if index_name not in pinecone.list_indexes():
-                pinecone.create_index(
+            existing_indexes = self.pinecone_client.list_indexes().names()
+            
+            if index_name not in existing_indexes:
+                # Create serverless index
+                self.pinecone_client.create_index(
                     name=index_name,
                     dimension=384,  # all-MiniLM-L6-v2 dimension
-                    metric="cosine"
+                    metric="cosine",
+                    spec=ServerlessSpec(
+                        cloud='gcp',
+                        region='us-central1'
+                    )
                 )
-                time.sleep(60)  # Wait for index to be ready
+                # Wait for index to be ready
+                while not self.pinecone_client.describe_index(index_name).status['ready']:
+                    time.sleep(1)
             
-            self.pinecone_index = pinecone.Index(index_name)
+            self.pinecone_index = self.pinecone_client.Index(index_name)
             return True, "Pinecone connected successfully!"
         except Exception as e:
             return False, f"Pinecone connection failed: {str(e)}"
@@ -463,12 +474,14 @@ def main():
         st.subheader("🌲 Pinecone Setup")
         pinecone_api_key = st.text_input("Pinecone API Key", type="password", 
                                        help="Get your free API key from pinecone.io")
-        pinecone_env = st.selectbox("Environment", ["gcp-starter", "us-west1-gcp", "us-east1-gcp"])
+        
+        # Note: Environment is now handled automatically by serverless
+        st.info("💡 Using Pinecone Serverless (GCP us-central1)")
         
         if st.button("Connect to Pinecone", type="primary"):
             if pinecone_api_key:
                 with st.spinner("Connecting to Pinecone..."):
-                    success, message = assistant.initialize_pinecone(pinecone_api_key, pinecone_env)
+                    success, message = assistant.initialize_pinecone(pinecone_api_key)
                     if success:
                         st.session_state.pinecone_connected = True
                         st.success(message)
