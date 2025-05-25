@@ -148,11 +148,15 @@ class CodebaseAssistant:
             existing_indexes = self.pinecone_client.list_indexes().names()
             
             if index_name not in existing_indexes:
-                # Create serverless index
+                # Create serverless index with free tier region
                 self.pinecone_client.create_index(
                     name=index_name,
-                    dimension=512,  # all-MiniLM-L6-v2 dimension
-                    metric="cosine"
+                    dimension=384,  # all-MiniLM-L6-v2 dimension
+                    metric="cosine",
+                    spec=ServerlessSpec(
+                        cloud='aws',
+                        region='us-east-1'  # Free tier supported region
+                    )
                 )
                 # Wait for index to be ready
                 while not self.pinecone_client.describe_index(index_name).status['ready']:
@@ -428,11 +432,12 @@ Please provide a helpful answer based on the code context above."""
             
             # Fallback response
             if context_chunks:
-                return f"""Based on the code context found, here are the most relevant pieces:
+                return """Based on the code context found, here are the most relevant pieces:
 
 {chr(10).join([f"**{chunk['file_path']}** ({chunk['language']}):{chr(10)}```{chunk['language']}{chr(10)}{chunk['content'][:500]}...{chr(10)}```{chr(10)}" for chunk in context_chunks[:2]])}
 
 This code appears to be related to your query: "{query}". You can examine the full context above for more details."""
+
             else:
                 return f"I couldn't find specific code related to '{query}' in the indexed repositories. Try refining your search query or make sure the relevant repositories are indexed."
                 
@@ -471,8 +476,8 @@ def main():
         pinecone_api_key = st.text_input("Pinecone API Key", type="password", 
                                        help="Get your free API key from pinecone.io")
         
-        # Note: Environment is now handled automatically by serverless
-        st.info("💡 Using Pinecone Serverless (GCP us-central1)")
+        # Note: Using AWS us-east-1 for free tier compatibility
+        st.info("💡 Using Pinecone Serverless (AWS us-east-1) - Free Tier Compatible")
         
         if st.button("Connect to Pinecone", type="primary"):
             if pinecone_api_key:
