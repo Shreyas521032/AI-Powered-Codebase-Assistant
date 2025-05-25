@@ -7,3 +7,4 @@ gitpython
 tree_sitter
 requests
 sqlite-utils
+requests
