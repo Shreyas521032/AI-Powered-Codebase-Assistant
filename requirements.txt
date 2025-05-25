@@ -1,0 +1,11 @@
+streamlit
+pinecone-client
+sentence-transformers
+transformers
+torch
+gitpython
+tree-sitter
+requests
+sqlite3
+pathlib2
+hashlib2
