@@ -151,12 +151,8 @@ class CodebaseAssistant:
                 # Create serverless index
                 self.pinecone_client.create_index(
                     name=index_name,
-                    dimension=384,  # all-MiniLM-L6-v2 dimension
-                    metric="cosine",
-                    spec=ServerlessSpec(
-                        cloud='gcp',
-                        region='us-central1'
-                    )
+                    dimension=512,  # all-MiniLM-L6-v2 dimension
+                    metric="cosine"
                 )
                 # Wait for index to be ready
                 while not self.pinecone_client.describe_index(index_name).status['ready']:
